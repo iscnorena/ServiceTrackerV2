@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "docs:erd": "tsx scripts/generate-erd.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",

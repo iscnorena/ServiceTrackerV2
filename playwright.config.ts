@@ -21,6 +21,11 @@ export default defineConfig({
     // `next start` y no `next dev`: se prueba el mismo build que se despliega.
     command: `npm run start -- --port ${PORT}`,
     url: BASE_URL,
+    // Cuidado con reutilizar: si ya hay un servidor en este puerto levantado a
+    // mano, hereda SU entorno y no el de aquí. Con un NEXTAUTH_URL distinto, el
+    // cierre de sesión redirige a un puerto donde no hay nada y la prueba falla
+    // con un error de navegación que no explica nada. Si aparece algo así,
+    // matar el proceso del puerto y dejar que Playwright levante el suyo.
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {

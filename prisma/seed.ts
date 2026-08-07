@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { LEGAL_DOCUMENTS } from "./legal-content";
 
 /// Seed de demo. Todo es ficticio a propósito: no se usan datos reales de ningún
 /// hotel ni huésped. Crea dos clientes distintos (uno pagando, uno en prueba)
@@ -166,30 +167,9 @@ async function main() {
 }
 
 async function seedLegalDocuments(publishedById: string) {
-  const documents = [
-    {
-      type: "TERMS" as const,
-      locale: "es",
-      content: `_Documento de demostración._\n\n## 1. Objeto\nServiceTracker es un servicio de software que permite a grupos hoteleros dar seguimiento a los requerimientos de sus huéspedes.\n\n## 2. Licencia\nEl servicio se licencia por propiedad (hotel) bajo suscripción mensual. Los precios vigentes se muestran al momento de contratar.\n\n## 3. Periodo de prueba\nLas organizaciones nuevas cuentan con un periodo de prueba gratuito. Durante la prueba se puede dar de alta un número limitado de propiedades.\n\n## 4. Cancelación\nLa suscripción puede cancelarse en cualquier momento. Al cancelar se restringe el acceso operativo, pero la información del cliente se conserva.`,
-    },
-    {
-      type: "TERMS" as const,
-      locale: "en",
-      content: `_Demonstration document._\n\n## 1. Purpose\nServiceTracker is a software service that lets hotel groups track their guests' requests.\n\n## 2. License\nThe service is licensed per property (hotel) under a monthly subscription. Current prices are shown at checkout.\n\n## 3. Trial period\nNew organizations get a free trial period. During the trial a limited number of properties can be registered.\n\n## 4. Cancellation\nThe subscription can be cancelled at any time. Cancelling restricts operational access, but customer data is preserved.`,
-    },
-    {
-      type: "PRIVACY" as const,
-      locale: "es",
-      content: `_Documento de demostración._\n\n## Datos que tratamos\nServiceTracker almacena datos de contacto de huéspedes (nombre y teléfono de contacto por habitación) capturados por el personal del hotel, así como datos de las cuentas del propio personal.\n\n## Finalidad\nLos datos se usan exclusivamente para operar el seguimiento de requerimientos dentro del hotel que los capturó.\n\n## Retención\nMientras la organización esté activa o en prueba, sus datos se conservan sin límite de tiempo. Si una organización permanece cancelada más de 90 días, sus datos quedan marcados como elegibles para eliminación definitiva.\n\n## Aislamiento entre clientes\nCada organización cliente opera de forma aislada: ningún usuario puede acceder a información de otra organización.`,
-    },
-    {
-      type: "PRIVACY" as const,
-      locale: "en",
-      content: `_Demonstration document._\n\n## Data we process\nServiceTracker stores guest contact data (name and per-room contact phone) captured by hotel staff, as well as staff account data.\n\n## Purpose\nData is used exclusively to operate request tracking within the hotel that captured it.\n\n## Retention\nWhile the organization is active or trialing, its data is kept indefinitely. If an organization stays cancelled for more than 90 days, its data becomes eligible for permanent deletion.\n\n## Isolation between customers\nEach client organization operates in isolation: no user can access another organization's information.`,
-    },
-  ];
-
-  for (const document of documents) {
+  // El contenido vive en prisma/legal-content.ts para poder leerlo y editarlo
+  // como texto, no incrustado entre llamadas a la base.
+  for (const document of LEGAL_DOCUMENTS) {
     await prisma.legalDocument.create({
       data: { ...document, format: "TEXT", version: 1, publishedById },
     });
