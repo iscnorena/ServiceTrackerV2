@@ -1,0 +1,620 @@
+// ServiceTracker V2 — modelo de datos
+// Multi-tenancy row-level: Organization es el límite de aislamiento más crítico,
+// Hotel es el segundo. Ver secciones 3 y 8 del PLAN.
+//
+// Convención: todo en inglés (tablas, columnas, enums). Los enums usan códigos
+// neutrales en inglés para que la traducción viva solo en la capa visual (next-intl).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums de sistema
+// ---------------------------------------------------------------------------
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CorporateRole {
+  NONE
+  CORPORATE_ADMIN
+  SUPERADMIN
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum PermissionLevel {
+  STAFF
+  ADMIN
+}
+
+enum AuthTokenType {
+  INVITE
+  PASSWORD_RESET
+}
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+}
+
+enum LegalDocumentFormat {
+  TEXT
+  PDF
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum TicketStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketSource {
+  STAFF
+  GUEST
+}
+
+enum TicketActivityAction {
+  CREATED
+  REASSIGNED
+  STATUS_CHANGED
+  COMMENTED
+  ATTACHED
+  DELETED
+}
+
+enum AttachmentType {
+  BEFORE
+  AFTER
+  OTHER
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ---------------------------------------------------------------------------
+// Plataforma y licenciamiento
+// ---------------------------------------------------------------------------
+
+/// Cliente/corporativo que contrató la licencia. Límite de aislamiento principal.
+model Organization {
+  id                     String             @id @default(cuid())
+  name                   String
+  stripeCustomerId       String?            @unique
+  stripeSubscriptionId   String?            @unique
+  subscriptionStatus     SubscriptionStatus @default(TRIALING)
+  trialEndsAt            DateTime?
+  /// Precio congelado al momento de suscribirse (grandfathering, decisión #5)
+  pricePerHotelSnapshot  Decimal?           @db.Decimal(10, 2)
+  currencySnapshot       String?
+  /// Fecha de cancelación — base para la política de retención de datos (sección 4.8)
+  cancelledAt            DateTime?
+  /// Recordatorio de "prueba por vencer" ya enviado (evita reenvíos del cron diario)
+  trialReminderSentAt    DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  hotels Hotel[]
+  users  User[]
+
+  @@map("organizations")
+}
+
+/// Configuración global de precios — un único registro, editable por PLATFORM_OWNER.
+model PlatformConfig {
+  id                   String   @id @default(cuid())
+  pricePerHotelMonthly Decimal  @db.Decimal(10, 2)
+  currency             String   @default("MXN")
+  trialDays            Int      @default(14)
+  trialHotelLimit      Int      @default(1)
+  updatedById          String?
+  updatedBy            User?    @relation("PlatformConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt            DateTime @updatedAt
+
+  @@map("platform_config")
+}
+
+/// Términos y aviso de privacidad. Inmutable: publicar crea siempre una versión nueva.
+model LegalDocument {
+  id            String              @id @default(cuid())
+  type          LegalDocumentType
+  locale        String
+  format        LegalDocumentFormat @default(TEXT)
+  content       String?
+  fileUrl       String?
+  version       Int
+  publishedById String?
+  publishedBy   User?               @relation("LegalDocumentPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  publishedAt   DateTime            @default(now())
+  createdAt     DateTime            @default(now())
+
+  @@unique([type, locale, version])
+  @@index([type, locale, version(sort: Desc)])
+  @@map("legal_documents")
+}
+
+/// Idempotencia de webhooks de Stripe: Stripe puede reenviar el mismo evento.
+model ProcessedStripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@map("processed_stripe_events")
+}
+
+// ---------------------------------------------------------------------------
+// Propiedades y usuarios
+// ---------------------------------------------------------------------------
+
+model Hotel {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  billingStatus  BillingStatus @default(ACTIVE)
+  name           String
+  address        String?
+  timezone       String?       @default("America/Mexico_City")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  userAccess   UserHotelAccess[]
+  departments  Department[]
+  guests       Guest[]
+  reservations Reservation[]
+  rooms        Room[]
+  tickets      Ticket[]
+  supplyItems  SupplyItem[]
+  shiftNotes   ShiftNote[]
+  recurring    RecurringTicketTemplate[]
+
+  @@index([organizationId])
+  @@map("hotels")
+}
+
+/// Staff — identidad global, no atada a un solo hotel.
+model User {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  /// null si el usuario solo entra con Google o si aún no acepta su invitación
+  passwordHash String?
+
+  /// null únicamente para cuentas PLATFORM_OWNER, que no pertenecen a ningún cliente
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Cuenta del equipo que opera la plataforma, NO un cliente
+  isPlatformOwner Boolean       @default(false)
+  corporateRole   CorporateRole @default(NONE)
+  /// Permiso otorgable, solo relevante si corporateRole = CORPORATE_ADMIN
+  canDeleteTickets Boolean      @default(false)
+
+  preferredLocale String?
+  status          UserStatus @default(ACTIVE)
+  emailVerified   DateTime?
+  image           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  hotelAccess          UserHotelAccess[]
+  authTokens           AuthToken[]
+  createdDepartments   Department[]              @relation("DepartmentCreatedBy")
+  createdTickets       Ticket[]                  @relation("TicketCreatedBy")
+  assignedTickets      Ticket[]                  @relation("TicketAssignedTo")
+  deletedTickets       Ticket[]                  @relation("TicketDeletedBy")
+  ticketActivities     TicketActivity[]
+  ticketComments       TicketComment[]
+  ticketAttachments    TicketAttachment[]
+  createdSupplyItems   SupplyItem[]
+  shiftNotes           ShiftNote[]
+  recurringTemplates   RecurringTicketTemplate[]
+  publishedLegalDocs   LegalDocument[]           @relation("LegalDocumentPublishedBy")
+  platformConfigEdits  PlatformConfig[]          @relation("PlatformConfigUpdatedBy")
+  accounts             Account[]
+  sessions             Session[]
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+/// Acceso de un usuario a un hotel específico (no aplica a CORPORATE_ADMIN/SUPERADMIN).
+model UserHotelAccess {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotelId         String
+  hotel           Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  permissionLevel PermissionLevel @default(STAFF)
+  departmentId    String?
+  department      Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  /// Permiso otorgable, solo relevante si permissionLevel = ADMIN. STAFF nunca puede.
+  canDeleteTickets Boolean        @default(false)
+  createdAt       DateTime        @default(now())
+
+  @@unique([userId, hotelId])
+  @@index([hotelId])
+  @@map("user_hotel_access")
+}
+
+/// Invitaciones y recuperación de contraseña. El token se guarda hasheado (SHA-256).
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, type])
+  @@map("auth_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Modelos de NextAuth (adapter) — solo para el provider de Google
+// ---------------------------------------------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogos operativos (escopados por hotel)
+// ---------------------------------------------------------------------------
+
+/// Departamento — catálogo dinámico por hotel. Reemplaza el rol fijo y la categoría fija.
+model Department {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name    String
+  /// Tiempo esperado de resolución. null = este departamento no maneja SLA.
+  defaultSlaMinutes Int?
+  /// Si true, abrir/resolver un ticket de este depto mueve Room.status
+  affectsRoomStatus Boolean @default(false)
+  active            Boolean @default(true)
+  createdById       String?
+  createdBy         User?   @relation("DepartmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tickets     Ticket[]
+  userAccess  UserHotelAccess[]
+  shiftNotes  ShiftNote[]
+  recurring   RecurringTicketTemplate[]
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@map("departments")
+}
+
+/// Insumo — catálogo por hotel, NO global (ver nota de normalización en sección 4.5).
+model SupplyItem {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name    String
+  /// Nombre normalizado (minúsculas, sin acentos) para agrupar entre hoteles
+  normalizedName String
+  active         Boolean @default(true)
+  createdById    String?
+  createdBy      User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+
+  usages TicketSupplyUsage[]
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@index([normalizedName])
+  @@map("supply_items")
+}
+
+// ---------------------------------------------------------------------------
+// Huéspedes, reservas y habitaciones
+// ---------------------------------------------------------------------------
+
+/// Titular de la reserva. Escopado por hotel para no cruzar datos entre clientes.
+model Guest {
+  id        String   @id @default(cuid())
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+
+  @@index([hotelId])
+  @@map("guests")
+}
+
+model Reservation {
+  id        String   @id @default(cuid())
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  checkIn   DateTime
+  checkOut  DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roomStays RoomStay[]
+
+  @@index([hotelId])
+  @@index([guestId])
+  @@map("reservations")
+}
+
+model Room {
+  id      String     @id @default(cuid())
+  hotelId String
+  hotel   Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  number  String
+  floor   String?
+  status  RoomStatus @default(AVAILABLE)
+  /// Slug único que arma la URL pública del QR: /qr/{qrSlug}
+  qrSlug    String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roomStays RoomStay[]
+  recurring RecurringTicketTemplate[]
+
+  @@unique([hotelId, number])
+  @@index([hotelId])
+  @@map("rooms")
+}
+
+/// Ocupación puntual de una habitación dentro de una reserva, con su propio contacto.
+/// Es el registro clave: mantenimiento ve el contacto de ESE cuarto, no el del titular.
+model RoomStay {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  roomId        String
+  room          Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  contactName   String
+  contactPhone  String?
+  checkIn       DateTime
+  checkOut      DateTime
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  tickets Ticket[]
+
+  @@index([reservationId])
+  @@index([roomId])
+  @@map("room_stays")
+}
+
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+model Ticket {
+  id      String @id @default(cuid())
+  /// Denormalizado desde Department/RoomStay para que el scoping y los reportes sean directos
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  status   TicketStatus   @default(PENDING)
+  priority TicketPriority @default(MEDIUM)
+
+  roomStayId String?
+  roomStay   RoomStay? @relation(fields: [roomStayId], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation("TicketAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  createdBy   User?   @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  /// Calculado al crear, a partir de Department.defaultSlaMinutes y el multiplicador de prioridad
+  slaDueAt DateTime?
+
+  source TicketSource @default(STAFF)
+  /// Categoría amplia que eligió el huésped en el formulario del QR (CLEANING/BROKEN/OTHER)
+  guestCategory String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  resolvedAt  DateTime?
+  /// Soft delete: el ticket desaparece de los listados pero queda para auditoría
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("TicketDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  activities  TicketActivity[]
+  comments    TicketComment[]
+  attachments TicketAttachment[]
+  supplyUsage TicketSupplyUsage[]
+
+  @@index([hotelId, status])
+  @@index([hotelId, deletedAt])
+  @@index([departmentId])
+  @@index([assignedToId])
+  @@index([roomStayId])
+  @@map("tickets")
+}
+
+/// Historial de actividad — se genera automáticamente desde los Server Actions.
+model TicketActivity {
+  id       String               @id @default(cuid())
+  ticketId String
+  ticket   Ticket               @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId   String?
+  user     User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action   TicketActivityAction
+  detail   String?
+  createdAt DateTime            @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_activities")
+}
+
+/// Notas internas de staff a staff. Nunca visibles para el huésped.
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  id           String         @id @default(cuid())
+  ticketId     String
+  ticket       Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?          @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  url          String
+  type         AttachmentType @default(OTHER)
+  createdAt    DateTime       @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+/// Insumos usados al resolver un ticket — alimenta el reporte corporativo (sección 4.5).
+model TicketSupplyUsage {
+  id           String     @id @default(cuid())
+  ticketId     String
+  ticket       Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  supplyItemId String
+  supplyItem   SupplyItem @relation(fields: [supplyItemId], references: [id], onDelete: Cascade)
+  quantity     Int        @default(1)
+  createdAt    DateTime   @default(now())
+
+  @@index([ticketId])
+  @@index([supplyItemId])
+  @@map("ticket_supply_usage")
+}
+
+/// Plantilla de mantenimiento preventivo. Un cron diario materializa los tickets.
+model RecurringTicketTemplate {
+  id           String              @id @default(cuid())
+  hotelId      String
+  hotel        Hotel               @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  departmentId String
+  department   Department          @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  roomId       String?
+  room         Room?               @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  priority     TicketPriority      @default(MEDIUM)
+  frequency    RecurrenceFrequency
+  nextRunAt    DateTime
+  /// Última corrida materializada — hace idempotente al cron si se reintenta
+  lastRunAt    DateTime?
+  active       Boolean             @default(true)
+  createdById  String?
+  createdBy    User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([hotelId])
+  @@index([active, nextRunAt])
+  @@map("recurring_ticket_templates")
+}
+
+/// Contexto operativo del turno — no atado a un ticket específico.
+model ShiftNote {
+  id           String      @id @default(cuid())
+  hotelId      String
+  hotel        Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  authorId     String?
+  author       User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  content      String
+  createdAt    DateTime    @default(now())
+
+  @@index([hotelId, createdAt])
+  @@map("shift_notes")
+}
