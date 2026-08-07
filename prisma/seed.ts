@@ -22,7 +22,7 @@ function normalize(name: string): string {
 }
 
 function slug(length = 10): string {
-  const alphabet = "23456789abcdefghijkmnpqrstuvwxyz";
+  const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"; // sin 0/o ni 1/l/i
   let out = "";
   for (let i = 0; i < length; i++) {
     out += alphabet[Math.floor(Math.random() * alphabet.length)];
@@ -170,22 +170,22 @@ async function seedLegalDocuments(publishedById: string) {
     {
       type: "TERMS" as const,
       locale: "es",
-      content: `# Términos y condiciones\n\n_Documento de demostración._\n\n## 1. Objeto\nServiceTracker es un servicio de software que permite a grupos hoteleros dar seguimiento a los requerimientos de sus huéspedes.\n\n## 2. Licencia\nEl servicio se licencia por propiedad (hotel) bajo suscripción mensual. Los precios vigentes se muestran al momento de contratar.\n\n## 3. Periodo de prueba\nLas organizaciones nuevas cuentan con un periodo de prueba gratuito. Durante la prueba se puede dar de alta un número limitado de propiedades.\n\n## 4. Cancelación\nLa suscripción puede cancelarse en cualquier momento. Al cancelar se restringe el acceso operativo, pero la información del cliente se conserva.`,
+      content: `_Documento de demostración._\n\n## 1. Objeto\nServiceTracker es un servicio de software que permite a grupos hoteleros dar seguimiento a los requerimientos de sus huéspedes.\n\n## 2. Licencia\nEl servicio se licencia por propiedad (hotel) bajo suscripción mensual. Los precios vigentes se muestran al momento de contratar.\n\n## 3. Periodo de prueba\nLas organizaciones nuevas cuentan con un periodo de prueba gratuito. Durante la prueba se puede dar de alta un número limitado de propiedades.\n\n## 4. Cancelación\nLa suscripción puede cancelarse en cualquier momento. Al cancelar se restringe el acceso operativo, pero la información del cliente se conserva.`,
     },
     {
       type: "TERMS" as const,
       locale: "en",
-      content: `# Terms and conditions\n\n_Demonstration document._\n\n## 1. Purpose\nServiceTracker is a software service that lets hotel groups track their guests' requests.\n\n## 2. License\nThe service is licensed per property (hotel) under a monthly subscription. Current prices are shown at checkout.\n\n## 3. Trial period\nNew organizations get a free trial period. During the trial a limited number of properties can be registered.\n\n## 4. Cancellation\nThe subscription can be cancelled at any time. Cancelling restricts operational access, but customer data is preserved.`,
+      content: `_Demonstration document._\n\n## 1. Purpose\nServiceTracker is a software service that lets hotel groups track their guests' requests.\n\n## 2. License\nThe service is licensed per property (hotel) under a monthly subscription. Current prices are shown at checkout.\n\n## 3. Trial period\nNew organizations get a free trial period. During the trial a limited number of properties can be registered.\n\n## 4. Cancellation\nThe subscription can be cancelled at any time. Cancelling restricts operational access, but customer data is preserved.`,
     },
     {
       type: "PRIVACY" as const,
       locale: "es",
-      content: `# Aviso de privacidad\n\n_Documento de demostración._\n\n## Datos que tratamos\nServiceTracker almacena datos de contacto de huéspedes (nombre y teléfono de contacto por habitación) capturados por el personal del hotel, así como datos de las cuentas del propio personal.\n\n## Finalidad\nLos datos se usan exclusivamente para operar el seguimiento de requerimientos dentro del hotel que los capturó.\n\n## Retención\nMientras la organización esté activa o en prueba, sus datos se conservan sin límite de tiempo. Si una organización permanece cancelada más de 90 días, sus datos quedan marcados como elegibles para eliminación definitiva.\n\n## Aislamiento entre clientes\nCada organización cliente opera de forma aislada: ningún usuario puede acceder a información de otra organización.`,
+      content: `_Documento de demostración._\n\n## Datos que tratamos\nServiceTracker almacena datos de contacto de huéspedes (nombre y teléfono de contacto por habitación) capturados por el personal del hotel, así como datos de las cuentas del propio personal.\n\n## Finalidad\nLos datos se usan exclusivamente para operar el seguimiento de requerimientos dentro del hotel que los capturó.\n\n## Retención\nMientras la organización esté activa o en prueba, sus datos se conservan sin límite de tiempo. Si una organización permanece cancelada más de 90 días, sus datos quedan marcados como elegibles para eliminación definitiva.\n\n## Aislamiento entre clientes\nCada organización cliente opera de forma aislada: ningún usuario puede acceder a información de otra organización.`,
     },
     {
       type: "PRIVACY" as const,
       locale: "en",
-      content: `# Privacy policy\n\n_Demonstration document._\n\n## Data we process\nServiceTracker stores guest contact data (name and per-room contact phone) captured by hotel staff, as well as staff account data.\n\n## Purpose\nData is used exclusively to operate request tracking within the hotel that captured it.\n\n## Retention\nWhile the organization is active or trialing, its data is kept indefinitely. If an organization stays cancelled for more than 90 days, its data becomes eligible for permanent deletion.\n\n## Isolation between customers\nEach client organization operates in isolation: no user can access another organization's information.`,
+      content: `_Demonstration document._\n\n## Data we process\nServiceTracker stores guest contact data (name and per-room contact phone) captured by hotel staff, as well as staff account data.\n\n## Purpose\nData is used exclusively to operate request tracking within the hotel that captured it.\n\n## Retention\nWhile the organization is active or trialing, its data is kept indefinitely. If an organization stays cancelled for more than 90 days, its data becomes eligible for permanent deletion.\n\n## Isolation between customers\nEach client organization operates in isolation: no user can access another organization's information.`,
     },
   ];
 

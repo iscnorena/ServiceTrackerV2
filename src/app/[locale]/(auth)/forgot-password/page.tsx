@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("forgotTitle")}</CardTitle>
+        <CardTitle as="h1">{t("forgotTitle")}</CardTitle>
         <CardDescription>{t("forgotSubtitle")}</CardDescription>
       </CardHeader>
 

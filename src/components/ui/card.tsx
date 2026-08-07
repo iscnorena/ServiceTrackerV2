@@ -33,9 +33,18 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+// Desviación deliberada del componente original de shadcn, que renderiza un
+// `div`: el título de una tarjeta es un encabezado de sección, y sin elemento de
+// encabezado la página no tiene esquema navegable para un lector de pantalla.
+// `as` permite subirlo a h1 en las pantallas donde la tarjeta ES la página
+// (login, registro), en vez de dejarlas sin encabezado principal.
+function CardTitle({
+  className,
+  as: Component = "h3",
+  ...props
+}: React.ComponentProps<"h3"> & { as?: "h1" | "h2" | "h3" }) {
   return (
-    <div
+    <Component
       data-slot="card-title"
       className={cn(
         "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",

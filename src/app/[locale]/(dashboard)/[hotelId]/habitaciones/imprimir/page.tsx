@@ -62,6 +62,8 @@ export default async function PrintQrPage({
             {t("printRoom", { number: sheet.number })}
           </h2>
 
+          {/* Es un data: URI de un QR generado al vuelo, no un asset remoto:
+              next/image no aporta nada y rompería la impresión. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={sheet.dataUrl}

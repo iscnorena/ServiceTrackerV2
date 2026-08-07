@@ -33,6 +33,7 @@ yarn-error.log*
 # env files — nunca se commitean, salvo la plantilla de ejemplo
 .env*
 !.env.example
+!.env.test.example
 
 # artefactos de descarga de Windows/WSL
 *:Zone.Identifier
@@ -48,3 +49,9 @@ next-env.d.ts
 
 # configuracion local de Claude Code
 .claude/
+
+# reportes de cobertura y de pruebas
+/coverage
+/playwright-report
+/test-results
+/.playwright

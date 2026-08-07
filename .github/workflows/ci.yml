@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Una corrida por rama: si llegan dos pushes seguidos, la anterior se cancela.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://st2:st2pass@localhost:5432/servicetracker_test?schema=public
+  AUTH_SECRET: ci-secret-not-used-anywhere-else-0123456789
+  NEXTAUTH_URL: http://localhost:3210
+  NEXT_PUBLIC_APP_URL: http://localhost:3210
+  CRON_SECRET: ci-cron-secret
+
+jobs:
+  quality:
+    name: Typecheck, lint y pruebas
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: st2
+          POSTGRES_PASSWORD: st2pass
+          POSTGRES_DB: servicetracker_test
+        ports:
+          - 5432:5432
+        # Sin este healthcheck los pasos arrancan antes de que Postgres acepte
+        # conexiones y las migraciones fallan de forma intermitente.
+        options: >-
+          --health-cmd "pg_isready -U st2"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Aplicar migraciones
+        run: npx prisma migrate deploy
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Pruebas unitarias y de integración
+        run: npm run test:coverage
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: st2
+          POSTGRES_PASSWORD: st2pass
+          POSTGRES_DB: servicetracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U st2"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://st2:st2pass@localhost:5432/servicetracker?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Preparar base de datos con el seed de demo
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Instalar navegador
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas end-to-end
+        run: npm run test:e2e
+
+      - name: Guardar reporte si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

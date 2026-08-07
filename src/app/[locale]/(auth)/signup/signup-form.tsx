@@ -67,7 +67,7 @@ export function SignupForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("signupTitle")}</CardTitle>
+        <CardTitle as="h1">{t("signupTitle")}</CardTitle>
         <CardDescription>{t("signupSubtitle", { days: trialDays })}</CardDescription>
       </CardHeader>
 

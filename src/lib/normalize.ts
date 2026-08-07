@@ -14,9 +14,11 @@ export function normalizeSupplyName(name: string): string {
 }
 
 /// Slug corto y legible para las URLs públicas de QR (`/qr/{slug}`).
-/// Sin caracteres ambiguos (0/O, 1/l/I) para que se pueda teclear a mano desde
-/// el PDF impreso si el código no escanea.
-const SLUG_ALPHABET = "23456789abcdefghijkmnpqrstuvwxyz";
+///
+/// Se excluyen los caracteres que se confunden al teclear: `0`/`o`, y `1`/`l`/`i`.
+/// Importa porque la URL se imprime en texto plano debajo del código, como
+/// respaldo para cuando el QR no escanea y alguien la escribe a mano.
+const SLUG_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
 
 export function generateQrSlug(length = 10): string {
   const bytes = new Uint8Array(length);

@@ -58,7 +58,9 @@ export function SetPasswordForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{mode === "invite" ? t("inviteTitle") : t("resetTitle")}</CardTitle>
+        <CardTitle as="h1">
+          {mode === "invite" ? t("inviteTitle") : t("resetTitle")}
+        </CardTitle>
         {mode === "invite" ? (
           <CardDescription>{t("inviteSubtitle")}</CardDescription>
         ) : null}

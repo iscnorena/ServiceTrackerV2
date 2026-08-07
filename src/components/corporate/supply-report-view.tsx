@@ -30,7 +30,6 @@ export function SupplyReportView({
   selectedHotels: string[];
 }) {
   const t = useTranslations("supplies");
-  const tCommon = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { TicketDetail } from "@/components/tickets/ticket-detail";
 import { requireHotelContext } from "@/lib/hotel-scope";
@@ -15,7 +14,6 @@ export default async function TicketDetailPage({
 }) {
   const { hotelId, ticketId } = await params;
   const ctx = await requireHotelContext(hotelId);
-  const t = await getTranslations("tickets");
 
   const ticket = await getTicketDetail(ctx, ticketId);
   if (!ticket) notFound();
