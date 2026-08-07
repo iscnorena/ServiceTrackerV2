@@ -2,6 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Da formato al Markdown de los documentos legales, que se renderiza sin clases
+   propias porque el contenido lo escribe el PLATFORM_OWNER, no el código. */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
