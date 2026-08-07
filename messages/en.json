@@ -491,5 +491,16 @@
       "cta": "Reactivate subscription"
     },
     "footer": "Sent by ServiceTracker · If you weren't expecting this email, you can ignore it."
+  },
+  "attachments": {
+    "title": "Ticket photos",
+    "hint": "Upload a photo of the issue and another of the finished work.",
+    "upload": "Upload photo",
+    "uploading": "Uploading…",
+    "type": "Photo type",
+    "empty": "No photos on this ticket yet.",
+    "notConfigured": "File storage isn't configured in this environment.",
+    "tooLarge": "The image exceeds the 5 MB limit.",
+    "invalidType": "Only JPG, PNG, WebP or HEIC images are accepted."
   }
 }

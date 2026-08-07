@@ -169,6 +169,22 @@ model LegalDocument {
   @@map("legal_documents")
 }
 
+/// Registro de intentos en la ruta pública del QR, para limitar el abuso.
+///
+/// Se guarda el hash de la IP y no la IP: sirve igual para contar intentos de un
+/// mismo origen, y evita almacenar un dato personal de huéspedes que nunca se
+/// autenticaron. Vive en la base y no en memoria porque en un entorno serverless
+/// cada instancia tendría su propio contador y el límite no aplicaría de verdad.
+model GuestReportAttempt {
+  id        String   @id @default(cuid())
+  ipHash    String
+  roomId    String?
+  createdAt DateTime @default(now())
+
+  @@index([ipHash, createdAt])
+  @@map("guest_report_attempts")
+}
+
 /// Idempotencia de webhooks de Stripe: Stripe puede reenviar el mismo evento.
 model ProcessedStripeEvent {
   id          String   @id

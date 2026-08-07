@@ -491,5 +491,16 @@
       "cta": "Reactivar suscripción"
     },
     "footer": "Enviado por ServiceTracker · Si no esperabas este correo, puedes ignorarlo."
+  },
+  "attachments": {
+    "title": "Fotos del ticket",
+    "hint": "Sube una foto del problema y otra del trabajo terminado.",
+    "upload": "Subir foto",
+    "uploading": "Subiendo…",
+    "type": "Tipo de foto",
+    "empty": "Todavía no hay fotos en este ticket.",
+    "notConfigured": "El almacenamiento de archivos no está configurado en este entorno.",
+    "tooLarge": "La imagen supera el tamaño máximo de 5 MB.",
+    "invalidType": "Solo se aceptan imágenes JPG, PNG, WebP o HEIC."
   }
 }

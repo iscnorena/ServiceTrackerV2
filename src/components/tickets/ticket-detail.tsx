@@ -28,6 +28,7 @@ import {
   SlaIndicator,
   StatusBadge,
 } from "@/components/tickets/ticket-badges";
+import { TicketAttachments } from "@/components/tickets/ticket-attachments";
 import {
   addTicketComment,
   addTicketSupplyUsage,
@@ -70,6 +71,7 @@ type Ticket = {
     createdAt: Date;
     user: { name: string } | null;
   }[];
+  attachments: { id: string; url: string; type: "BEFORE" | "AFTER" | "OTHER"; createdAt: Date }[];
   supplyUsage: { id: string; quantity: number; supplyItem: { id: string; name: string } }[];
 };
 
@@ -81,6 +83,7 @@ export function TicketDetail({
   supplies,
   canDelete,
   canReassign,
+  storageConfigured,
 }: {
   ticket: Ticket;
   hotelId: string;
@@ -89,6 +92,7 @@ export function TicketDetail({
   supplies: Option[];
   canDelete: boolean;
   canReassign: boolean;
+  storageConfigured: boolean;
 }) {
   const t = useTranslations("tickets");
   const tCommon = useTranslations("common");
@@ -151,6 +155,12 @@ export function TicketDetail({
           </CardContent>
         </Card>
 
+        <TicketAttachments
+          hotelId={hotelId}
+          ticketId={ticket.id}
+          attachments={ticket.attachments}
+          storageConfigured={storageConfigured}
+        />
         <CommentsCard ticket={ticket} hotelId={hotelId} />
         <TimelineCard ticket={ticket} tAction={tAction} />
       </div>

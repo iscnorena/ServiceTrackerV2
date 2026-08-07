@@ -11,6 +11,7 @@ import {
   Package,
   Repeat,
   Settings,
+  StickyNote,
   Users,
   UsersRound,
 } from "lucide-react";
@@ -38,6 +39,7 @@ export function SidebarNav({ nav }: { nav: NavModel }) {
         { href: `/${activeHotelId}/tickets`, label: t("tickets"), icon: ClipboardList },
         { href: `/${activeHotelId}/huespedes`, label: t("guests"), icon: UsersRound },
         { href: `/${activeHotelId}/habitaciones`, label: t("rooms"), icon: DoorClosed },
+        { href: `/${activeHotelId}/notas`, label: t("shiftNotes"), icon: StickyNote },
         { href: `/${activeHotelId}/reportes`, label: t("reports"), icon: FileText },
       ]
     : [];

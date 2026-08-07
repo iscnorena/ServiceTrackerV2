@@ -5,6 +5,7 @@ import { TicketDetail } from "@/components/tickets/ticket-detail";
 import { requireHotelContext } from "@/lib/hotel-scope";
 import { getTicketDetail, getTicketFormOptions } from "@/lib/queries/tickets";
 import { canDeleteTicket, isRestrictedToOwnDepartment } from "@/lib/auth/can";
+import { isStorageConfigured } from "@/lib/storage";
 import { prisma } from "@/lib/prisma";
 
 export default async function TicketDetailPage({
@@ -49,6 +50,7 @@ export default async function TicketDetailPage({
         supplies={supplies}
         canDelete={canDeleteTicket(ctx.user, hotelId)}
         canReassign={!restricted}
+        storageConfigured={isStorageConfigured()}
       />
     </>
   );
