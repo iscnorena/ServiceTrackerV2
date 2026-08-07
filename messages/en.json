@@ -39,7 +39,8 @@
     "notes": "Notes",
     "unassigned": "Unassigned",
     "today": "Today",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "skipToContent": "Skip to content"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -502,5 +503,11 @@
     "notConfigured": "File storage isn't configured in this environment.",
     "tooLarge": "The image exceeds the 5 MB limit.",
     "invalidType": "Only JPG, PNG, WebP or HEIC images are accepted."
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

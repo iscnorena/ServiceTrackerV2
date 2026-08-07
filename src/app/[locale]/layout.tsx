@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import { isLocale, locales } from "@/i18n/routing";
 import "../globals.css";
 
@@ -38,10 +39,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <NextIntlClientProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -45,11 +45,19 @@ const DEPARTMENT_TEMPLATES = [
   { name: "Amenidades", defaultSlaMinutes: null, affectsRoomStatus: false },
 ];
 
+/// Cada hotel captura sus insumos a su manera. Los tres primeros grupos varían en
+/// mayúsculas, acentos y espacios: son diferencias que la normalización SÍ une, y
+/// es lo que hace útil el reporte corporativo cruzado.
+///
+/// El cuarto grupo es deliberadamente el caso honesto: "Toallas grandes" es un
+/// sinónimo real de "Toallas de baño" que ninguna normalización de texto puede
+/// unir. Aparece separado en el reporte a propósito, para que la demo muestre
+/// también el límite documentado en la sección 4.5 y no solo el caso feliz.
 const SUPPLY_TEMPLATES = [
-  ["Pilas AA", "Baterías AA", "Pilas AA"],
-  ["Control remoto TV", "Control de TV", "Control remoto"],
-  ["Foco baño", "Foco de baño", "Focos baño"],
-  ["Toallas de baño", "Toallas", "Toalla de baño"],
+  ["Pilas AA", "PILAS AA", "Pilas  AA"],
+  ["Control remoto TV", "Control Remoto TV", "control remoto tv"],
+  ["Foco baño", "Foco Baño", "Foco bano"],
+  ["Toallas de baño", "Toallas grandes", "Toallas de Baño"],
 ];
 
 const TICKET_TEMPLATES = [
@@ -407,6 +415,7 @@ async function seedOrganization(
 
     // Tickets en distintos estados y con SLA ya vencido en algunos, para que el
     // dashboard se vea vivo desde el primer login de la demo.
+    let resolvedCount = 0;
     for (const [ticketIndex, template] of TICKET_TEMPLATES.entries()) {
       const department = departments.find((d) => d.name === template.department)!;
       const stay = roomStays[ticketIndex % roomStays.length];
@@ -471,13 +480,20 @@ async function seedOrganization(
             message: "Atendido en sitio. Se verificó con el huésped antes de cerrar.",
           },
         });
-        await prisma.ticketSupplyUsage.create({
-          data: {
-            ticketId: ticket.id,
-            supplyItemId: supplies[ticketIndex % supplies.length].id,
-            quantity: 1 + (ticketIndex % 3),
-          },
-        });
+        // Se rota sobre el catálogo completo (y no por `ticketIndex`, que con
+        // esta cadencia caía siempre en el mismo insumo) para que el reporte
+        // corporativo tenga varias filas que comparar.
+        for (let offset = 0; offset < 2; offset++) {
+          const supply = supplies[(resolvedCount * 2 + offset) % supplies.length];
+          await prisma.ticketSupplyUsage.create({
+            data: {
+              ticketId: ticket.id,
+              supplyItemId: supply.id,
+              quantity: 1 + ((ticketIndex + offset) % 3),
+            },
+          });
+        }
+        resolvedCount += 1;
       }
     }
 
